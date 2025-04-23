@@ -63,21 +63,27 @@ export default function ProductCard({
   }
 
   const formatQuantity = (quantity: string) => {
-    // Bileşik ürünler için içerik sayısını göster
-    if (isComposite) {
-      return `${contents.length} article${contents.length > 1 ? 's' : ''}`
-    }
-    
-    const match = quantity.match(/(\d+)\s*([a-zA-Z]+)/)
-    if (match) {
-      const [_, amount, unit] = match
-      if (unit.toLowerCase() === 'g') {
-        return `${amount}g`
-      }
-      return `1 pièce`
-    }
-    return quantity
-  }
+     // Burada tüm birim tipleri doğru şekilde formatlanmalı
+     if (isComposite) {
+       return `${contents.length} article${contents.length > 1 ? 's' : ''}`
+     }
+     
+     // Bu kısmı güncellemeniz gerekebilir
+     const match = quantity.match(/(\d+)\s*([a-zA-Z]+)/)
+     if (match) {
+       const [_, amount, unit] = match
+       // Tüm birim tiplerini doğru şekilde işle
+       switch(unit.toLowerCase()) {
+         case 'kg': return `${amount} kg`;
+         case 'g': return `${amount}g`;
+         case 'bouquet': return `${amount} bouquet`;
+         case 'barquette': return `${amount} barquette`;
+         case 'pièce': case 'piece': return `${amount} pièce`;
+         default: '${amount} ${unitText}';
+       }
+     }
+     return quantity
+   }
 
   const handleAddToCart = () => {
     // Bileşik ürün ise içerikleriyle birlikte ekle
@@ -99,7 +105,12 @@ export default function ProductCard({
       const match = quantity.match(/(\d+)\s*([a-zA-Z]+)/)
       if (match) {
         const weight = parseInt(match[1])
-        const unit = match[2].toLowerCase() === 'g' ? 'g' : 'pc'
+
+        const unitText = match[2].toLowerCase() 
+
+	const unit = ['kg', 'g', 'pièce', 'bouquet', 'barquette'].includes(unitText) 
+        ? unitText 
+        : 'pc'
 
         const cartItem = {
           id,
@@ -107,7 +118,7 @@ export default function ProductCard({
           price: Number(price),
           image,
           unit,
-          weight: unit === 'g' ? weight : undefined,
+          weight: weight,
           origin: origin || undefined
         }
         
