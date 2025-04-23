@@ -1,0 +1,11 @@
+/* Google Fonts Tanımlamaları */
+
+@font-face {
+  font-family: 'Solitreo';
+  src: url('/fonts/Solitreo-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Diğer font varyasyonları (bold, italic, light, vb.) için de benzer tanımlamalar ekleyebilirsiniz */ 

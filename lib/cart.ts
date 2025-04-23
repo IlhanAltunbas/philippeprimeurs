@@ -1,0 +1,204 @@
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { shallow } from 'zustand/shallow'
+import { getImageUrl } from "@/lib/api-config";
+
+export const formatSingleQuantity = (unit: string, weight?: number) => {
+  if (unit === 'g' && weight) {
+    return `${weight}g`
+  }
+  return '1 pièce'
+}
+
+export interface CartItem {
+  id: string
+  name: string
+  price: number // Birim fiyat
+  quantity?: number
+  unit: string
+  weight?: number
+  image?: string
+  isComposite?: boolean
+  contents?: Array<{
+    name: string
+    quantity: string
+    origin?: string
+  }>
+}
+
+interface CartState {
+  isOpen: boolean
+  items: CartItem[]
+  total: number
+  estimatedTotal: number
+}
+
+interface CartActions {
+  setIsOpen: (isOpen: boolean) => void
+  addToCart: (item: Omit<CartItem, 'quantity'>) => void
+  updateQuantity: (name: string, quantity: number) => void
+  removeFromCart: (name: string) => void
+  getTotal: () => number
+  getEstimatedTotal: () => number
+  clearCart: () => void
+  recalculateTotals: () => void
+}
+
+type CartStore = CartState & CartActions
+
+// Toplam hesaplama fonksiyonu
+const calculateTotal = (items: CartItem[]): number => {
+  return Number(items.reduce((total, item) => total + item.price * (item.quantity || 0), 0).toFixed(2))
+}
+
+// Tahmini toplam hesaplama fonksiyonu
+const calculateEstimatedTotal = (total: number): number => {
+  return Number(total.toFixed(2))
+}
+
+export const useCart = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      isOpen: false,
+      total: 0,
+      estimatedTotal: 0,
+
+      setIsOpen: (open) => set({ isOpen: open }),
+      
+      addToCart: (newItem) => {
+        set((state) => {
+          const existingItem = state.items.find((item) => item.name === newItem.name)
+          let updatedItems
+          
+          if (existingItem) {
+            updatedItems = state.items.map((item) =>
+              item.name === newItem.name
+                ? { ...item, quantity: (item.quantity || 0) + 1 }
+                : item
+            )
+          } else {
+            const fixedImage = newItem.image || '/placeholder.svg'
+            const imageUrl = fixedImage.startsWith('/') 
+              ? fixedImage 
+              : `/products/${fixedImage}`
+            
+            updatedItems = [...state.items, { 
+              ...newItem, 
+              image: getImageUrl(newItem.image),
+              quantity: 1 
+            }]
+          }
+          
+          const newTotal = calculateTotal(updatedItems)
+          
+          return {
+            items: updatedItems,
+            total: newTotal,
+            estimatedTotal: calculateEstimatedTotal(newTotal)
+          }
+        })
+      },
+      
+      updateQuantity: (name, quantity) => {
+        set((state) => {
+          const updatedItems = state.items.map((item) => 
+            item.name === name ? { ...item, quantity: Math.max(0, quantity) } : item
+          ).filter(item => (item.quantity || 0) > 0)
+          
+          const newTotal = calculateTotal(updatedItems)
+          
+          return { 
+            items: updatedItems,
+            total: newTotal,
+            estimatedTotal: calculateEstimatedTotal(newTotal)
+          }
+        })
+      },
+      
+      removeFromCart: (name) => {
+        set((state) => {
+          const updatedItems = state.items.filter((item) => item.name !== name)
+          const newTotal = calculateTotal(updatedItems)
+          
+          return {
+            items: updatedItems,
+            total: newTotal,
+            estimatedTotal: calculateEstimatedTotal(newTotal)
+          }
+        })
+      },
+      
+      clearCart: () => {
+        set({ 
+          items: [],
+          total: 0,
+          estimatedTotal: 0
+        })
+      },
+      
+      getTotal: () => {
+        return get().total
+      },
+      
+      getEstimatedTotal: () => {
+        return get().estimatedTotal
+      },
+      
+      recalculateTotals: () => {
+        set((state) => {
+          const newTotal = calculateTotal(state.items)
+          return {
+            total: newTotal,
+            estimatedTotal: calculateEstimatedTotal(newTotal)
+          }
+        })
+      }
+    }),
+    {
+      name: 'cart-storage',
+      version: 7,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+	  // Sepetteki ürünlerin resim URL'lerini düzelt
+	    if (state.items && state.items.length > 0) {
+	      state.items = state.items.map(item => {
+	        // Resim yolu kontrolü ve düzeltme
+	        if (item.image) {
+	          // Resim yolunu düzelt (eğer gerekiyorsa)
+	          if (!item.image.startsWith('/') && !item.image.startsWith('http')) {
+	            item.image = `/products/${item.image}`;
+	          }
+	        } else {
+	          item.image = '/placeholder.svg';
+	        }
+	        return item;
+	      });
+	    }
+          // Sepet yüklendiğinde toplamları yeniden hesapla
+          const total = calculateTotal(state.items)
+          state.total = total
+          state.estimatedTotal = calculateEstimatedTotal(total)
+        }
+      }
+    }
+  )
+)
+
+// Performans için seçici fonksiyonlar - useMemo ile değerleri memoize ediyoruz
+export const useCartItems = () => useCart((state) => state.items)
+
+export const useCartTotals = () => {
+  const store = useCart()
+  const total = store.total
+  const estimatedTotal = store.estimatedTotal
+  
+  return {
+    total,
+    estimatedTotal
+  }
+}
+
+export const useCartOpen = () => useCart((state) => state.isOpen) 

@@ -1,0 +1,102 @@
+/* Admin sayfaları için özel stiller */
+.admin-root * {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  scroll-behavior: auto !important;
+}
+
+.admin-root {
+  height: 100vh;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+}
+
+.admin-root.login-page {
+  position: relative;
+  overflow: auto;
+}
+
+.admin-content {
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Tüm admin sayfaları için scroll özelliği */
+.container, 
+.admin-page, 
+.admin-content,
+[class*="dashboard"] {
+  max-height: 100%;
+  overflow-y: auto !important;
+}
+
+/* Tablolar için scroll özelliği */
+.table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Dialog ve Select bileşenleri için özel stiller */
+.admin-root [role="dialog"],
+.admin-root [role="listbox"] {
+  position: fixed !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.admin-page {
+  @apply bg-white;
+  min-height: 100vh;
+}
+
+.admin-page table {
+  @apply w-full border-collapse;
+}
+
+.admin-page th {
+  @apply text-left p-4 bg-gray-50 border-b;
+}
+
+.admin-page td {
+  @apply p-4 border-b;
+}
+
+.admin-page tr:hover {
+  @apply bg-gray-50;
+}
+
+/* Dialog ve form elemanları için stiller */
+.admin-page [role="dialog"] {
+  @apply bg-white rounded-lg shadow-lg;
+}
+
+.admin-page input,
+.admin-page select,
+.admin-page textarea {
+  @apply border rounded-md p-2 w-full;
+}
+
+.admin-page button {
+  @apply rounded-md transition-colors;
+}
+
+/* Responsive tasarım için */
+@media (max-width: 768px) {
+  .admin-page {
+    @apply p-4;
+  }
+  
+  .admin-page table {
+    @apply text-sm;
+  }
+  
+  .admin-page td,
+  .admin-page th {
+    @apply p-2;
+  }
+} 
