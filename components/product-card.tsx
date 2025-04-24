@@ -25,8 +25,13 @@ interface ProductCardProps {
   image?: string
   type?: string
   quantity?: string
+  unit?: string
   origin?: string
   contents?: ProductItem[]
+  category?: {
+    id: number
+    name: string
+  }
 }
 
 export default function ProductCard({
@@ -36,8 +41,10 @@ export default function ProductCard({
   image = "/placeholder.jpg", // Doğrudan public klasöründen al
   type = "",
   quantity = "",
+  unit = "",
   origin = "",
-  contents = []
+  contents = [],
+  category
 }: ProductCardProps) {
   const { addToCart } = useCart()
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -63,27 +70,59 @@ export default function ProductCard({
   }
 
   const formatQuantity = (quantity: string) => {
-     // Burada tüm birim tipleri doğru şekilde formatlanmalı
+     // Bileşik ürünler için özel formatlama
      if (isComposite) {
-       return `${contents.length} article${contents.length > 1 ? 's' : ''}`
+       return `${contents.length} article${contents.length > 1 ? 's' : ''}`;
      }
      
-     // Bu kısmı güncellemeniz gerekebilir
-     const match = quantity.match(/(\d+)\s*([a-zA-Z]+)/)
-     if (match) {
-       const [_, amount, unit] = match
-       // Tüm birim tiplerini doğru şekilde işle
-       switch(unit.toLowerCase()) {
-         case 'kg': return `${amount} kg`;
-         case 'g': return `${amount}g`;
-         case 'bouquet': return `${amount} bouquet`;
-         case 'barquette': return `${amount} barquette`;
-         case 'pièce': case 'piece': return `${amount} pièce`;
-         default: '${amount} ${unitText}';
-       }
+     // API'den gelen unit değeri varsa, öncelikle onu kullan
+     if (unit && unit.trim() !== '') {
+       // quantity'nin sayısal olup olmadığını kontrol et, değilse varsayılan kullan
+       const amount = !isNaN(Number(quantity)) ? quantity : '1'; 
+       return formatSingleQuantity(unit, Number(amount)); // formatSingleQuantity'ye gönder
      }
-     return quantity
+     
+     // quantity string'i içinde birim arama (örn: "250g") - Bu artık yedek durum olmalı
+     const match = quantity.match(/(\d+)\s*([a-zA-ZÀ-ÿ]+)/u);
+     if (match) {
+       const [_, amount, unitFromQuantity] = match;
+       // Bilinen birimlerle eşleşiyorsa formatla
+       switch(unitFromQuantity.toLowerCase()) {
+         case 'kg':
+         case 'g':
+         case 'bouquet':
+         case 'barquette':
+         case 'pièce':
+         case 'piece':
+         case 'pc':
+           return formatSingleQuantity(unitFromQuantity, Number(amount));
+         default:
+           // Bilinmeyen birimse olduğu gibi birleştir
+           return `${amount} ${unitFromQuantity}`;
+       }
+     } 
+
+     // Eğer quantity sadece sayısal bir değerse ve unit prop'u yoksa, 'pièce' varsay
+     if (!isNaN(Number(quantity)) && quantity.trim() !== '') {
+       return formatSingleQuantity('pièce', Number(quantity));
+     }
+     
+     // Son çare olarak quantity'yi olduğu gibi döndür (beklenmedik durum)
+     return quantity;
    }
+
+  const formatSingleQuantity = (unit: string, amount: number) => {
+    // Burada tüm birim tipleri doğru şekilde formatlanmalı
+    switch(unit.toLowerCase()) {
+      case 'kg': return `${amount} kg`;
+      case 'g': return `${amount}g`;
+      case 'bouquet': return `${amount} bouquet`;
+      case 'barquette': return `${amount} barquette`;
+      case 'pièce': case 'piece': return `${amount} pièce`;
+      default: return `${amount} ${unit}`;
+    }
+  }
+         
 
   const handleAddToCart = () => {
     // Bileşik ürün ise içerikleriyle birlikte ekle
@@ -99,44 +138,25 @@ export default function ProductCard({
         origin: origin || undefined
       }
       
-      addToCart(cartItem)
+      addToCart(cartItem);
     } else {
       // Normal ürün ise ağırlık bilgisiyle ekle
-      const match = quantity.match(/(\d+)\s*([a-zA-Z]+)/)
-      if (match) {
-        const weight = parseInt(match[1])
+      const weightValue = !isNaN(Number(quantity)) ? Number(quantity) : 1; // quantity prop'unu sayıya çevir, değilse 1 varsay
+      const unitValue = unit || 'pièce'; // unit prop'unu kullan, yoksa 'pièce' varsay
 
-        const unitText = match[2].toLowerCase() 
-
-	const unit = ['kg', 'g', 'pièce', 'bouquet', 'barquette'].includes(unitText) 
-        ? unitText 
-        : 'pc'
-
-        const cartItem = {
-          id,
-          name,
-          price: Number(price),
-          image,
-          unit,
-          weight: weight,
-          origin: origin || undefined
-        }
-        
-        addToCart(cartItem)
-      } else {
-        const cartItem = {
-          id,
-          name,
-          price: Number(price),
-          image,
-          unit: 'pc',
-          weight: undefined,
-          origin: origin || undefined
-        }
-        
-        addToCart(cartItem)
+      const cartItem = {
+        id,
+        name,
+        price: Number(price),
+        image,
+        unit: unitValue,      // Doğru birimi kullan
+        weight: weightValue,  // Doğru miktarı/ağırlığı kullan
+        origin: origin || undefined,
+        isComposite: false
       }
-    }
+        
+        addToCart(cartItem);
+      } 
 
     toast({
       title: "Ajouté au panier",
@@ -172,6 +192,11 @@ export default function ProductCard({
         {type && (
           <Badge className="absolute top-2 left-2 bg-primary/90 z-10">
             {type}
+          </Badge>
+        )}
+	{category && (
+          <Badge className="absolute top-2 right-2 bg-secondary/90 z-10">
+            {category.name}
           </Badge>
         )}
         {isComposite && (

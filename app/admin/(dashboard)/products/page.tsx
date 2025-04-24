@@ -234,79 +234,7 @@ export default function AdminProducts() {
     fileInputRef.current?.click()
   }
 
-  // Resim sıkıştırma fonksiyonu
-  const compressImage = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const maxWidth = 800
-      const maxHeight = 800
-      const quality = 0.8
-      const reader = new FileReader()
-
-      reader.onload = function(e: ProgressEvent<FileReader>) {
-        const img = document.createElement('img')
-        img.onload = function() {
-          try {
-            // Canvas oluştur
-            const canvas = document.createElement('canvas')
-            let width = img.width
-            let height = img.height
-
-            // En boy oranını koru
-            if (width > maxWidth) {
-              height = Math.round((maxWidth * height) / width)
-              width = maxWidth
-            }
-            if (height > maxHeight) {
-              width = Math.round((maxHeight * width) / height)
-              height = maxHeight
-            }
-
-            canvas.width = width
-            canvas.height = height
-
-            // Resmi canvas'a çiz
-            const ctx = canvas.getContext('2d')
-            if (!ctx) {
-              reject(new Error('Canvas context oluşturulamadı'))
-              return
-            }
-
-            // PNG dosyaları için arka plan transparan kalmalı
-            if (file.type === 'image/png') {
-              // PNG için transparan arka plan
-              ctx.clearRect(0, 0, width, height)
-            } else {
-              // JPEG ve diğer formatlar için beyaz arka plan
-              ctx.fillStyle = '#FFFFFF'
-              ctx.fillRect(0, 0, width, height)
-            }
-
-            ctx.drawImage(img, 0, 0, width, height)
-
-            // Orijinal formatı koru
-            const imageType = file.type || 'image/jpeg'
-            const dataUrl = canvas.toDataURL(imageType, quality)
-            resolve(dataUrl)
-          } catch (error) {
-            reject(error)
-          }
-        }
-
-        img.onerror = () => reject(new Error('Resim yüklenemedi'))
-        
-        if (e.target?.result) {
-          img.src = e.target.result as string
-        } else {
-          reject(new Error('Dosya okunamadı'))
-        }
-      }
-
-      reader.onerror = () => reject(new Error('Dosya okunamadı'))
-      reader.readAsDataURL(file)
-    })
-  }
-
-  // handleFileChange fonksiyonunu güncelle
+	//handleFileChange fonksiyonunu güncelle
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -319,6 +247,8 @@ export default function AdminProducts() {
           description: "La taille de l'image doit être inférieure à 5 Mo",
           variant: "destructive",
         })
+	// Input'u temizle
+        if (event.target) event.target.value = '';
         return
       }
 
@@ -329,12 +259,21 @@ export default function AdminProducts() {
           description: "Veuillez sélectionner un fichier image valide",
           variant: "destructive",
         })
+	// Input'u temizle
+        if (event.target) event.target.value = '';
         return
       }
-
-      // Resmi sıkıştır
-      const compressedImageBase64 = await compressImage(file)
-      setNewProduct(prev => ({ ...prev, image: compressedImageBase64 }))
+      // Sıkıştırma kaldırıldı. Sadece önizleme için bir URL oluştur (isteğe bağlı)
+      // ve/veya dosyanın seçildiğini belirten bir state güncellemesi yapabilirsiniz.
+      // Şimdilik sadece dosya input'unun dolu olduğunu biliyoruz.
+      // Önizleme için state'i güncelleyelim:
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProduct(prev => ({ ...prev, image: reader.result as string }));
+      }
+      reader.readAsDataURL(file);
+      // Not: State'de hala base64 olacak ama gönderme mantığı bunu kullanmayacak.
+ 
 
     } catch (error) {
       toast({
@@ -374,28 +313,35 @@ export default function AdminProducts() {
       
       formData.append('origin', newProduct.origin || '')
       formData.append('description', newProduct.description || '')
-      formData.append('isComposite', String(isComposite)) // Her zaman doğru değeri kullan
+      
       
       // isActive değerini newProduct'tan alalım
+      formData.append('isComposite', String(isComposite))
       formData.append('isActive', String(newProduct.isActive))
 
       // İçerikleri ekle - bileşik ürün olsun olmasın, içerik varsa ekle
       if (newProduct.contents && newProduct.contents.length > 0) {
         formData.append('contents', JSON.stringify(newProduct.contents))
       }
+      // Resim kontrolü - Basitleştirildi
+      const imageFile = fileInputRef.current?.files?.[0]; // Seçilen dosyayı al
 
-      // Resim kontrolü - Güncellendi
-      if (fileInputRef.current?.files?.[0]) {
-        // Eğer yeni bir dosya seçilmişse, doğrudan dosyayı ekle
-        formData.append('image', fileInputRef.current.files[0]);
-      } else if (newProduct.image && typeof newProduct.image === 'string' && newProduct.image.startsWith('/')) {
-        // Mevcut bir resim yolu varsa (ve dosya seçilmemişse), imageUrl olarak gönder
+      if (imageFile) {
+        // Yeni dosya seçildiyse, onu gönder
+        formData.append('image', imageFile);
+        console.log("Yeni dosya gönderiliyor:", imageFile.name);
+      } else if (editingProduct && newProduct.image && typeof newProduct.image === 'string' && newProduct.image.startsWith('/')) {
+         // Eğer DÜZENLEME modundaysak ve YENİ dosya seçilmediyse,
+         // ve state'de geçerli bir yol varsa, bu yolu imageUrl olarak gönder (resim değişmedi)
         formData.append('imageUrl', newProduct.image);
-      } else if (newProduct.image === null || newProduct.image === '') {
-        // Eğer resim state'i null veya boş ise, resmi kaldır flag'ini ekle (isteğe bağlı)
-        // formData.append('removeImage', 'true');
+      console.log("Mevcut resim yolu gönderiliyor:", newProduct.image);
+      } else if (editingProduct && (newProduct.image === null || newProduct.image === '')) {
+         // Eğer DÜZENLEME modundaysak ve state'deki resim null/boş ise,
+         // resmi kaldır flag'ini gönder (backend bunu işlemeli)
+         formData.append('removeImage', 'true');
+         console.log("Resim kaldırma isteği gönderiliyor.");
       }
-      // Base64 veya diğer durumlar için şimdilik özel bir işlem yapmıyoruz, API zaten handle etmeli
+      // Yeni ürün eklerken resim seçilmediyse hiçbir şey gönderilmez, backend null/placeholder atar.
 
       const endpoint = editingProduct 
         ? `/api/admin/products/${editingProduct.id}`
@@ -411,7 +357,6 @@ export default function AdminProducts() {
         throw new Error(errorData.error || "Une erreur s'est produite lors de l'opération")
       }
 
-      // Başarılı işlem
       await fetchProducts()
       setIsAddingProduct(false)
       setEditingProduct(null)
@@ -421,6 +366,7 @@ export default function AdminProducts() {
         title: "Succès",
         description: editingProduct ? "Produit mis à jour" : "Produit ajouté",
       })
+
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -428,7 +374,7 @@ export default function AdminProducts() {
         variant: "destructive",
       })
       
-      // Hata oluşsa bile verileri yenilemeyi dene
+      
       fetchProducts()
     }
   }

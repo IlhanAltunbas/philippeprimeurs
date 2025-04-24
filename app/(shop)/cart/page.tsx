@@ -43,7 +43,25 @@ export default function CartPage() {
   const availableTimeSlots = selectedDate ? getAvailableTimeSlots(selectedDate, hours) : []
 
   const formatQuantity = (item: CartItem) => {
-    return formatSingleQuantity(item.unit, item.weight)
+    // Bileşik ürün kontrolü
+    if (item.isComposite && item.contents && item.contents.length > 0) {
+      return `${item.contents.length} article${item.contents.length > 1 ? 's' : ''}`;
+    }
+    
+    // Unit değeri varsa
+    if (item.unit) {
+      // Weight değeri varsa
+      if (item.weight !== undefined && item.weight !== null) {
+        return formatSingleQuantity(item.unit, item.weight);
+      }
+      // Weight yok ama quantity var
+      else if (item.quantity) {
+        return formatSingleQuantity(item.unit, item.quantity);
+      }
+    }
+    
+    // Hiçbir duruma uymuyorsa varsayılan değer
+    return formatSingleQuantity('pièce', item.quantity || 1);
   }
 
   const getItemPrice = (item: CartItem) => {

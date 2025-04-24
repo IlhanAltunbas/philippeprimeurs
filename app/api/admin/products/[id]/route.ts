@@ -202,15 +202,29 @@ export async function PUT(
         
         // Benzersiz dosya adı oluştur
         const timestamp = Date.now();
-        const extension = path.extname(imageData.name);
-        const uniqueFileName = `${timestamp}_${path.basename(imageData.name, extension)}${extension}`;
+        const originalName = imageData.name;
+        const extension = path.extname(originalName);
+        const baseNameWithoutExt = path.basename(originalName, extension);
+
+        // Dosya adını temizle: boşlukları '_' yap, özel karakterleri kaldır
+        const sanitizedBaseName = baseNameWithoutExt
+          .normalize('NFD') // Aksanları ayır
+          .replace(/[\u0300-\u036f]/g, '') // Aksanları kaldır
+          .replace(/\s+/g, '_') // Boşlukları _ ile değiştir
+          .replace(/[^a-zA-Z0-9_.-]/g, ''); // Sadece harf, rakam, _, ., - kalsın
+
+        const uniqueFileName = `${timestamp}_${sanitizedBaseName}${extension}`;
         const filePath = path.join(publicDir, uniqueFileName);
         
         await fs.promises.writeFile(filePath, buffer);
         imagePath = `products/${uniqueFileName}`;
       } catch (error) {
-        console.error("Erreur lors de l'enregistrement de l'image:", error);
-        // Hata durumunda mevcut resmi koru
+        console.error("Backend - DOSYA YAZMA HATASI:", error); // Detaylı loglama
+        // Hata durumunda işlemi durdur ve 500 hatası döndür
+        return NextResponse.json(
+          { error: "Erreur lors de l\'enregistrement de l\'image sur le serveur.", details: (error as Error).message },
+          { status: 500 }
+        );
       }
     } else if (imageUrl) {
       // Eğer yeni bir resim yüklenmedi ama imageUrl gönderildiyse, bu URL'yi kullan

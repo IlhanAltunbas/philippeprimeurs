@@ -125,8 +125,10 @@ export function ProductList({
             image={product.image}
             type={product.type}
             quantity={product.quantity}
+	    unit={product.unit}
             origin={product.origin}
             contents={product.contents}
+	    category={product.category}
           />
         ))}
       </div>

@@ -111,7 +111,7 @@ const CartItemComponent = memo(({
           <p className="text-sm font-medium truncate">{item.name}</p>
           <div className="flex items-center gap-1 mt-1">
             <p className="text-xs text-gray-500">
-              {formatSingleQuantity(item.unit, item.weight)}
+              {formatSingleQuantity(item.unit || 'pièce', item.weight || 1)}
             </p>
             <span className="text-xs text-gray-400">×</span>
             <p className="text-xs font-medium">
@@ -129,7 +129,7 @@ const CartItemComponent = memo(({
           >
             <Minus size={12} />
           </button>
-          <span className="px-2 text-xs font-medium">{item.quantity}</span>
+          <span className="px-2 text-xs font-medium">{item.quantity || 1}</span>
           <button
             type="button"
             onClick={handleIncrease}

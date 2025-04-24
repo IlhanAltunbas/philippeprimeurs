@@ -4,7 +4,7 @@ import { shallow } from 'zustand/shallow'
 import { getImageUrl } from "@/lib/api-config";
 
 export const formatSingleQuantity = (unit: string, weight?: number) => {
-  if (!unit || !weight) return '1 pièce';
+  if (!unit || weight === undefined || weight === null) return '1 pièce';
   
   switch(unit) {
     case 'kg':
@@ -15,7 +15,7 @@ export const formatSingleQuantity = (unit: string, weight?: number) => {
       return `${weight} bouquet`;
     case 'barquette':
       return `${weight} barquette`;
-    case 'pièce':
+    case 'piece':
       return `${weight} pièce`;
     case 'pc':
       return `${weight} pièce`;
