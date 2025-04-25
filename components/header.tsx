@@ -179,7 +179,7 @@ export default function Header() {
               >
                 <div className="w-[100px] h-[100px] relative overflow-hidden">
                   <Image
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-PqQjfEwmE03vBUap7SvsrQ0Yh2BoQY.png"
+                    src="/logo.png"
                     alt="Philippe Primeurs Logo"
                     width={100}
                     height={100}
@@ -229,7 +229,7 @@ export default function Header() {
                 >
                   <div className="w-[40px] h-[40px] relative overflow-hidden">
                     <Image
-                      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-PqQjfEwmE03vBUap7SvsrQ0Yh2BoQY.png"
+                      src="/logo.png"
                       alt="Philippe Primeurs Logo"
                       width={40}
                       height={40}
@@ -267,7 +267,7 @@ export default function Header() {
                   >
                     <div className="flex items-center">
                       <Image
-                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-PqQjfEwmE03vBUap7SvsrQ0Yh2BoQY.png"
+                        src="/logo.png"
                         alt="Philippe Primeurs Logo"
                         width={40}
                         height={40}

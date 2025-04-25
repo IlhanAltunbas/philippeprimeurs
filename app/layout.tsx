@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   title: "Philippe Primeurs",
   description: "Votre primeur de confiance",
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
   },
 }
 

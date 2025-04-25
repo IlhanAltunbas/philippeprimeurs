@@ -250,7 +250,10 @@ export function DeliveryForm({ open, onOpenChange, onSubmit, isSubmitting = fals
                   <FormItem>
                     <FormLabel>Message</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea 
+                        {...field} 
+                        placeholder="Si vous désirez une quantité différente que celle du produit affiché, n'hésitez pas à le préciser ici." 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
