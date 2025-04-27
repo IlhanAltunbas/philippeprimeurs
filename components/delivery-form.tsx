@@ -252,7 +252,7 @@ export function DeliveryForm({ open, onOpenChange, onSubmit, isSubmitting = fals
                     <FormControl>
                       <Textarea 
                         {...field} 
-                        placeholder="Si vous désirez une quantité différente que celle du produit affiché, n'hésitez pas à le préciser ici." 
+                        placeholder="Si vous désirez une quantité différente que celle du produit affiché ou être livré à domicile, n’hésitez pas à le préciser ici." 
                       />
                     </FormControl>
                     <FormMessage />

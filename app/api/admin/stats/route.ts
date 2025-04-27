@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   try {
     // Token kontrolü
     const cookieStore = await cookies()
-    const token = cookieStore.get("token")?.value
+    const token = cookieStore.get("auth-token")?.value
 
     if (!token) {
       console.error("Kimlik doğrulama hatası: Token bulunamadı")

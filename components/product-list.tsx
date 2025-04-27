@@ -38,7 +38,33 @@ export function ProductList({
       })
       
       if (!response.ok) {
-        throw new Error(`Ürünler yüklenirken bir hata oluştu: ${response.status}`)
+        let errorMessage = `Une erreur est survenue (${response.status}). Veuillez réessayer plus tard.`; // Default message
+        switch (response.status) {
+          case 401:
+            errorMessage = "Vous n'êtes pas autorisé à voir ces produits. Veuillez vous connecter.";
+            break;
+          case 403: // Forbidden
+            errorMessage = "Vous n'avez pas la permission d'accéder à ces produits.";
+            break;
+          case 404: // Not Found
+            errorMessage = "Les produits demandés n'ont pas été trouvés.";
+            break;
+          case 500: // Internal Server Error
+            errorMessage = "Erreur interne du serveur. Veuillez réessayer plus tard.";
+            break;
+          case 502: // Bad Gateway
+            errorMessage = "Erreur de passerelle. Le serveur n'a pas pu répondre.";
+            break;
+          case 503: // Service Unavailable
+            errorMessage = "Le service est temporairement indisponible. Veuillez réessayer plus tard.";
+            break;
+          // Add other specific cases if needed
+        }
+        setError(errorMessage); // Set the specific error message
+        setLoading(false); // Stop loading on error
+        // Optionally, clear products if the error means data is inaccessible
+        // setProducts([]); 
+        return; // Stop further execution in case of error
       }
       
       const data = await response.json()
@@ -47,8 +73,9 @@ export function ProductList({
       setError(null)
       setLoading(false)
     } catch (err) {
-      console.error("Ürünler yüklenirken hata oluştu:", err)
-      setError("Ürünler yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.")
+      // Network errors or other unexpected errors
+      console.error("Erreur lors de la récupération des produits:", err)
+      setError("Impossible de se connecter au serveur. Vérifiez votre connexion internet.")
       setLoading(false)
     }
   }
