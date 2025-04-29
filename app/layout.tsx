@@ -5,6 +5,7 @@ import { Playfair_Display, Source_Sans_3 } from "next/font/google"
 import { Toaster } from "react-hot-toast"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import CookieConsentWrapper from "@/components/cookie-consent-wrapper";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className={`h-full font-sans`}>
         {children}
         <Toaster position="bottom-right" />
+        <CookieConsentWrapper />
       </body>
     </html>
   )

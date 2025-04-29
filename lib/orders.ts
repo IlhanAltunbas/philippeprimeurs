@@ -16,7 +16,7 @@ interface OrderStore {
   fetchOrders: () => Promise<void>
   fetchOrderDetails: (orderId: string) => Promise<Order>
   createOrder: (
-    orderData: Omit<Order, "id" | "createdAt" | "status" | "items"> & { items: Omit<OrderItem, 'itemId' | 'productName'>[] }
+    orderData: Omit<Order, "id" | "createdAt" | "status" | "items"> & { items: Omit<OrderItem, 'itemId' | 'productName'>[], turnstileToken: string }
   ) => Promise<void>
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>
   deleteOrder: (orderId: string) => Promise<void>
@@ -163,13 +163,16 @@ export const useOrders = create<OrderStore>((set, get) => ({
   },
 
   createOrder: async (orderData) => {
+    // turnstileToken'ı orderData'dan ayır
+    const { turnstileToken, ...restOfOrderData } = orderData;
     try {
       set({ isLoading: true, error: null })
-      // NextJS API rotasını kullan
+      
       const response = await fetch(`/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        // İstek gövdesine token'ı da ekle
+        body: JSON.stringify({ ...restOfOrderData, turnstileToken }), 
       })
 
       if (!response.ok) {

@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
 import { shallow } from 'zustand/shallow'
 import { getImageUrl } from "@/lib/api-config";
+import Cookies from 'js-cookie';
 
 export const formatSingleQuantity = (unit: string, weight?: number) => {
   if (!unit || weight === undefined || weight === null) return '1 pièce';
@@ -56,6 +57,7 @@ interface CartActions {
   getEstimatedTotal: () => number
   clearCart: () => void
   recalculateTotals: () => void
+  persistCart: () => void
 }
 
 type CartStore = CartState & CartActions
@@ -69,6 +71,35 @@ const calculateTotal = (items: CartItem[]): number => {
 const calculateEstimatedTotal = (total: number): number => {
   return Number(total.toFixed(2))
 }
+
+// Koşullu depolama: Sadece çerez onayı varsa localStorage kullan
+const conditionalLocalStorage: StateStorage = {
+  getItem: (name) => {
+    const consentGiven = Cookies.get('philippePrimeursCookieConsent'); 
+    // CookieConsent'in varsayılan değeri "true" string'idir.
+    if (consentGiven === 'true') { 
+      return localStorage.getItem(name);
+    }
+    console.log('Cookie consent not given, skipping localStorage getItem.');
+    return null; 
+  },
+  setItem: (name, value) => {
+    const consentGiven = Cookies.get('philippePrimeursCookieConsent');
+    if (consentGiven === 'true') {
+      localStorage.setItem(name, value);
+    } else {
+      console.log('Cookie consent not given, skipping localStorage setItem.');
+    }
+  },
+  removeItem: (name) => {
+    const consentGiven = Cookies.get('philippePrimeursCookieConsent');
+    if (consentGiven === 'true') {
+      localStorage.removeItem(name);
+    } else {
+      console.log('Cookie consent not given, skipping localStorage removeItem.');
+    }
+  },
+};
 
 export const useCart = create<CartStore>()(
   persist(
@@ -167,12 +198,21 @@ export const useCart = create<CartStore>()(
             estimatedTotal: calculateEstimatedTotal(newTotal)
           }
         })
+      },
+
+      // Kullanıcı onay verdiğinde çağrılacak fonksiyon
+      persistCart: () => {
+        console.log("Cookie consent given. Triggering cart persistence (reload).");
+        // En basit yöntem: Sayfayı yeniden yükle
+        // Bu, persist middleware'inin localStorage'ı okumasını sağlar.
+        // Not: Bu, kullanıcı deneyimini biraz kesintiye uğratabilir.
+        window.location.reload(); 
       }
     }),
     {
       name: 'cart-storage',
       version: 7,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => conditionalLocalStorage), // Koşullu depolamayı kullan
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -183,7 +223,7 @@ export const useCart = create<CartStore>()(
 	        if (item.image) {
 	          // Resim yolunu düzelt (eğer gerekiyorsa)
 	          if (!item.image.startsWith('/') && !item.image.startsWith('http')) {
-	            item.image = `/products/${item.image}`;
+	            item.image = getImageUrl(item.image);
 	          }
 	        } else {
 	          item.image = '/placeholder.svg';
@@ -196,7 +236,8 @@ export const useCart = create<CartStore>()(
           state.total = total
           state.estimatedTotal = calculateEstimatedTotal(total)
         }
-      }
+      },
+      // skipHydration: Cookies.get('philippePrimeursCookieConsent') !== 'true' // Hydration'ı sadece onay yoksa atla?
     }
   )
 )

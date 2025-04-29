@@ -34,4 +34,5 @@ export interface Order {
   total: number
   pickupDate: string
   pickupTime: string
+  turnstileToken?: string; // Turnstile token alanı eklendi (isteğe bağlı)
 } 

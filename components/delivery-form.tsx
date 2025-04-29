@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -30,6 +31,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { cn } from "@/lib/utils"
+import { Turnstile } from '@marsidev/react-turnstile'
 
 const countryCodes = [
   { value: "+33", label: "France (+33)" },
@@ -52,9 +54,9 @@ const formSchema = z.object({
 })
 
 interface DeliveryFormProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSubmit: (data: z.infer<typeof formSchema>) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  onSubmit: (data: z.infer<typeof formSchema> & { turnstileToken: string }) => void
   isSubmitting?: boolean
 }
 
@@ -87,18 +89,241 @@ export function DeliveryForm({ open, onOpenChange, onSubmit, isSubmitting = fals
       message: ""
     },
   })
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  // Conditionally render Dialog based on whether open/onOpenChange are provided
+  const DialogWrapper = open !== undefined && onOpenChange !== undefined ? Dialog : React.Fragment;
+  const dialogProps = open !== undefined && onOpenChange !== undefined ? { open, onOpenChange } : {};
+
+  const handleLocalSubmit = (data: z.infer<typeof formSchema>) => {
+    if (!turnstileToken) {
+      form.setError("root.serverError", { 
+        type: "manual",
+        message: "Veuillez compléter la vérification CAPTCHA."
+      });
+      return; 
+    }
+    onSubmit({ ...data, turnstileToken });
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] z-[99999]">
-        <DialogHeader className="bg-white pt-6 px-6 -mx-6 -mt-6 mb-4">
-          <DialogTitle>Informations de livraison</DialogTitle>
-          <DialogDescription>
-            Veuillez remplir les informations de livraison ci-dessous.
-          </DialogDescription>
-        </DialogHeader>
+    <DialogWrapper {...dialogProps}>
+      {/* Conditionally render DialogContent only if it's used as a Dialog */}
+      {(open !== undefined && onOpenChange !== undefined) ? (
+        <DialogContent className="sm:max-w-[500px] z-[99999]">
+          <DialogHeader className="bg-white pt-6 px-6 -mx-6 -mt-6 mb-4">
+            <DialogTitle>Informations de livraison</DialogTitle>
+            <DialogDescription>
+              Veuillez remplir les informations de livraison ci-dessous.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLocalSubmit)} className="space-y-4">
+              {/* Zorunlu alanlar */}
+              <div className="space-y-4 pb-4 border-b">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prénom *</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nom *</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="countryCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code Pays *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <CustomSelectContent>
+                            {countryCodes.map((code) => (
+                              <SelectItem key={code.value} value={code.value}>
+                                {code.label}
+                              </SelectItem>
+                            ))}
+                          </CustomSelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Téléphone *</FormLabel>
+                        <FormControl>
+                          <Input {...field} maxLength={10} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Diğer alanlar */}
+              <div className="space-y-4">              
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pays</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ville</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code Postal</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresse</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Si vous désirez une quantité différente que celle du produit affiché ou être livré à domicile, n'hésitez pas à le préciser ici." 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Turnstile Widget */}
+              <div className="pt-4 border-t">
+                <Turnstile 
+                  siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY!}
+                  onSuccess={(token: string) => {
+                     console.log("Turnstile Token Alındı (DeliveryForm):", token);
+                     setTurnstileToken(token);
+                     form.clearErrors("root.serverError");
+                  }}
+                  onError={() => {
+                    console.error("Turnstile Hatası (DeliveryForm)");
+                    form.setError("root.serverError", { type: "manual", message: "Erreur de vérification CAPTCHA." });
+                  }}
+                   onExpire={() => {
+                     console.warn("Turnstile Süresi Doldu (DeliveryForm)");
+                     form.setError("root.serverError", { type: "manual", message: "Vérification CAPTCHA expirée." });
+                     setTurnstileToken(null); 
+                   }}
+                  options={{
+                    theme: 'light',
+                  }}
+                />
+                {form.formState.errors.root?.serverError && (
+                  <p className="text-sm font-medium text-destructive mt-2">
+                    {form.formState.errors.root.serverError.message}
+                  </p>
+                )}
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Envoi en cours..." : "Confirmer la commande"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      ) : (
+        // Render only the form if not used as a Dialog
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleLocalSubmit)} className="space-y-4">
             {/* Zorunlu alanlar */}
             <div className="space-y-4 pb-4 border-b">
               <div className="grid grid-cols-2 gap-4">
@@ -250,10 +475,7 @@ export function DeliveryForm({ open, onOpenChange, onSubmit, isSubmitting = fals
                   <FormItem>
                     <FormLabel>Message</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        {...field} 
-                        placeholder="Si vous désirez une quantité différente que celle du produit affiché ou être livré à domicile, n’hésitez pas à le préciser ici." 
-                      />
+                      <Textarea rows={3} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -261,16 +483,45 @@ export function DeliveryForm({ open, onOpenChange, onSubmit, isSubmitting = fals
               />
             </div>
 
+            {/* Turnstile Widget */}
+            <div className="pt-4 border-t">
+              <Turnstile 
+                siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY!}
+                onSuccess={(token: string) => {
+                   console.log("Turnstile Token Alındı (DeliveryForm):", token);
+                   setTurnstileToken(token);
+                   form.clearErrors("root.serverError");
+                }}
+                onError={() => {
+                  console.error("Turnstile Hatası (DeliveryForm)");
+                  form.setError("root.serverError", { type: "manual", message: "Erreur de vérification CAPTCHA." });
+                }}
+                 onExpire={() => {
+                   console.warn("Turnstile Süresi Doldu (DeliveryForm)");
+                   form.setError("root.serverError", { type: "manual", message: "Vérification CAPTCHA expirée." });
+                   setTurnstileToken(null); 
+                 }}
+                options={{
+                  theme: 'light',
+                }}
+              />
+              {form.formState.errors.root?.serverError && (
+                <p className="text-sm font-medium text-destructive mt-2">
+                  {form.formState.errors.root.serverError.message}
+                </p>
+              )}
+            </div>
+
             <Button 
               type="submit" 
               className="w-full" 
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Envoi en cours..." : "Confirmer la commande"}
+              {isSubmitting ? "Envoi en cours..." : "Envoyer la commande"}
             </Button>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      )}
+    </DialogWrapper>
   )
 } 

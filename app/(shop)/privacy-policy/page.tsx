@@ -3,7 +3,18 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Politique de Confidentialité | Philippe Primeurs',
-  description: 'Politique de confidentialité de Philippe Primeurs - Découvrez comment nous traitons vos données personnelles.',
+  description: 'Consultez la politique de confidentialité de Philippe Primeurs concernant la collecte et l\'utilisation de vos données personnelles à Mouscron.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Politique de Confidentialité - Philippe Primeurs',
+    description: 'Comment nous protégeons vos données personnelles.',
+    type: 'website',
+    locale: 'fr_BE',
+    url: 'https://www.philippeprimeurs.be/privacy-policy',
+  },
 };
 
 export default function PrivacyPolicy() {

@@ -11,3 +11,9 @@ yarn-error.log*
 
 # Çevresel değişkenler
 .env
+.env.local
+.env.production
+.env.dev
+
+
+prisma/generated/

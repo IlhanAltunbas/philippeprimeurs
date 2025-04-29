@@ -41,6 +41,7 @@ interface OrderData {
   total: number;
   pickupDate: string;
   pickupTime: string;
+  turnstileToken?: string;
 }
 
 // E-posta önbelleği - aynı içeriği tekrar göndermeyi önler
@@ -289,6 +290,10 @@ let ordersCache: any = null;
 let ordersCacheTime = 0;
 const ORDERS_CACHE_TTL = 60 * 1000; // 1 dakika
 
+// Turnstile sabitleri
+const TURNSTILE_VERIFY_ENDPOINT = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const SECRET_KEY = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
+
 export async function GET() {
   try {
     // Önbellek kontrolü
@@ -391,6 +396,36 @@ export async function POST(req: Request) {
   try {
     const data: OrderData = await req.json();
     console.log("Gelen sipariş verisi:", data);
+
+    // Turnstile Doğrulama Başlangıcı
+    if (!data.turnstileToken) {
+      console.error("Turnstile token eksik");
+      return NextResponse.json({ error: "CAPTCHA doğrulaması eksik." }, { status: 400 });
+    }
+    if (!SECRET_KEY) {
+       console.error('CLOUDFLARE_TURNSTILE_SECRET_KEY ortam değişkeni ayarlanmamış.');
+       // Bu istemciye gösterilmemeli, genel bir hata mesajı daha iyi
+       return NextResponse.json({ error: "Sunucu yapılandırma hatası." }, { status: 500 });
+    }
+
+    const turnstileResponse = await fetch(TURNSTILE_VERIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: SECRET_KEY,
+        response: data.turnstileToken,
+      }),
+    });
+    const turnstileData = await turnstileResponse.json();
+
+    if (!turnstileData.success) {
+      console.error('Turnstile doğrulaması başarısız:', turnstileData);
+      return NextResponse.json(
+        { error: 'Échec de la vérification CAPTCHA' },
+        { status: 403 } 
+      );
+    }
+    // Turnstile Doğrulama Sonu - Başarılı
 
     // Girdi Doğrulaması
     if (typeof data.total !== 'number' || !isFinite(data.total) || data.total < 0) {
@@ -497,9 +532,17 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Sipariş oluşturma hatası:", error);
+    // Hata mesajını daha spesifik hale getirelim
+    const errorMessage = error instanceof Error ? error.message : "Sipariş oluşturulurken bir hata oluştu";
+    let status = 500;
+    if (errorMessage.includes('CAPTCHA') || errorMessage.includes('vérification')) {
+        status = 403;
+    } else if (errorMessage.includes('Geçersiz') || errorMessage.includes('eksik')) {
+        status = 400;
+    }
     return NextResponse.json(
-      { error: "Sipariş oluşturulurken bir hata oluştu" },
-      { status: 500 }
+      { error: errorMessage },
+      { status: status }
     );
   }
 }

@@ -3,7 +3,18 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Conditions d\'Utilisation | Philippe Primeurs',
-  description: 'Conditions d\'utilisation de Philippe Primeurs - Découvrez les règles d\'utilisation de notre site.',
+  description: 'Consultez les conditions d\'utilisation du site web de Philippe Primeurs à Mouscron.',
+  robots: { 
+    index: false,
+    follow: true,
+  },
+  openGraph: {
+    title: 'Conditions d\'Utilisation - Philippe Primeurs',
+    description: 'Règles d\'utilisation de notre site web.',
+    type: 'website',
+    locale: 'fr_BE',
+    url: 'https://www.philippeprimeurs.be/terms-of-service',
+  },
 };
 
 export default function TermsOfService() {
